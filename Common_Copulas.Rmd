@@ -1,0 +1,79 @@
+---
+title: "Common Copulas"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+Definition:
+A **d-dimensional copula**, $ C:[0, 1]^d:\to [0, 1]$ is a **cumulative distribution function** with uniform marginals. 
+
+1. $C(\boldsymbol{u})=C(u_1, u_2...,u_d)$ is non-decresing in each component $u_i$. 
+2. $i^{th}$ marginal: $C(1,...,u_i, 1, ...1)=u_i$
+3. for $a_i\leq b_i$, $P(U_1\in[a_1, b_1],...U_d\in[a_d, b_d])$ is non negative. *Rectangle inequality*
+for $2\leq k <d$, $k$ margins of the $d$ copula is itself a copula. 
+> it fulfills the definition with reduced dimensions.
+
+# Sklar's Theorem 1959 #
+Consider a $d$-dimensional copula CDF, $F$, with marginals $F_1,...F_d$, then $\exists$ a copula C, s.t.:
+$$
+F(x_1,...x_d)=C(F_1(x_1),...F_d(x_d))
+$$
+If $F_i$ is continuous $\forall i\in[1,...d]$, then $C$ is unique; otherwise $C$ is unique determined on $Range(F_1)\times ...Range(F_d)$
+Density: PDF
+$$
+c(\boldsymbol{u})=\frac{\vartheta^dC(u_1,...u_d)}{\vartheta u_1...\vartheta u_d}
+$$
+Frechet-Hoeffding Bounds
+$$
+\max{\{1-d+\sum_{i=1}^{d}u_i, 0\}}\leq C(\boldsymbol u) \leq \min{\{u_1,...u_d\}}
+$$
+The upper bound is tight for all $d$. The lower bound is only tight for $d=2$.
+
+**independence** copula:
+$$
+\prod {(\boldsymbol u)}=\prod_{i=1}^{d}u_i
+$$
+
+> Copula describes the dependence structure between pairs of distribution.
+
+> It express the  dependence on a quantile scale.
+
+For multivariate discrete distributions, the copula is not unique.
+
+**Gaussian**
+
+Let $\boldsymbol{X}\sim MN_d(\boldsymbol{0},\boldsymbol{P})$. Then
+$$
+C_{P}^{Gau}(\boldsymbol u) :=\Phi_{\boldsymbol{P}}(\Phi^{-1}(u_1),...\Phi^{-1}(u_d))
+$$
+In simulation, follow the steps:
+
+1. Get correlation matrix $\boldsymbol P$ from covariance matrix $\boldsymbol \Sigma$.
+2. Get Cholesky decomposition vector: $\boldsymbol A$ that $\boldsymbol P = \boldsymbol A^T\boldsymbol A$
+3. Generate $\boldsymbol Z \sim MN_d(\boldsymbol 0, I_d)$
+4. Generate $\boldsymbol X = \boldsymbol A^T\boldsymbol Z$
+5. Return $\boldsymbol U = (\Phi(X_1),...\Phi(X_d))$
+$C(\boldsymbol u)$ is the copula of $\boldsymbol X$
+
+**t**
+$\boldsymbol X \sim \boldsymbol{t}_d(\nu,\boldsymbol{0},\boldsymbol{P})$ And 
+$$
+\boldsymbol X = \frac{\boldsymbol Z}{\sqrt{\xi/\nu}}
+$$
+where $\boldsymbol Z$ is as before and $\xi \sim \chi_{\nu}^{2}$ independently of $\boldsymbol Z$. 
+$$
+C_{P, \nu}^{t}(\boldsymbol u) :=\boldsymbol{t}_{\boldsymbol{P},\nu}(t_{\nu}^{-1}(u_1),...t_{\nu}^{-1}(u_d))
+$$
+Simulation:
+
+3. Generate $\boldsymbol X$
+4. Generate $\xi \sim \chi_{\nu}^{2}$ independent of $\boldsymbol X$
+5. Return $\boldsymbol U = (t_{\nu}(X_1/\sqrt{\xi / \nu},...,t_{\nu}(X_d/\sqrt{\xi / \nu} ))$
+
+*Bivariate Gumbel*
+*Bivariate Clayton*
+Other Archimedeam copulas include *Frank*, *Joe*. See Ruppert and McNeil.
+
+
