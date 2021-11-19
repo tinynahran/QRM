@@ -1,0 +1,2 @@
+# QRM
+Embrechts/Haugh/Ruppert
