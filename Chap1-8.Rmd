@@ -1,0 +1,199 @@
+---
+title: "Chap1-8, Ruppert"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Chapters 1 - 8 cover basic algebra and statistics
+
+
+### Chap 1: Introduction Omitted
+
+### Chap 2: Returns
+Instead of using existing quotation data, I use **quantmod** and **tidyquant** to access yahoo api.
+```{r eval=FALSE}
+install.packages{"quantmod"}
+install.packages{"tidyquant"}
+```
+*If Console doesn't work, try Packages - Install button.*
+
+
+
+```{r message=FALSE, warning=FALSE}
+library(tidyquant)
+getSymbols("AMZN", from = '2016-01-01', to = '2020-12-31', warnings = FALSE, auto.assign = TRUE)
+head(AMZN)
+```
+```{r }
+class(AMZN)
+chart_Series(AMZN)
+```
+To specify an asset universe, use a list:
+```{r}
+tick_basket = c("AAPL", "AMZN", "NFLX", "K")
+getSymbols(tick_basket, from = '2016-01-01', to = '2020-12-31')
+```
+The locally imported csv:
+```{r}
+setwd("~/Ruppert/datasets")
+data = read.csv("Stock_bond.csv", header = TRUE)
+```
+```{r}
+names(data)
+attach(data)
+par(mfrow = c(1, 2)) #setting form of graphics: 1*2 horizontal display
+plot(GM_AC)
+plot(F_AC)
+```
+
+```{r}
+dim(data) #number of obs by number of assets. Returns a vector
+nAss = dim(data)[1]
+#Simple Return Calc
+GM_Ret = GM_AC[-1]/GM_AC[-nAss] - 1 #-1: all but first. -nAss: all but last. In total: vector element division. Price: old to new
+F_Ret = F_AC[-1]/F_AC[-nAss] - 1
+par(mfrow = c(1, 1)) #Pivot 
+plot(GM_Ret, F_Ret)
+```
+
+Simulate prices
+
+```{r}
+niter = 1e5
+below = rep(0, niter) #arange
+set.seed(2009)
+for (i in 1:niter)
+{
+  r = rnorm(45, mean = 0.05/253, #a set normal random variable
+            sd = 0.23/sqrt(253))
+  logPrice = log(1e6)+cumsum(r) #cumulative log price for each
+   minlogP = min(logPrice)
+  below[i] = as.numeric(minlogP < log(9500000))
+}  
+mean(below)
+```
+In this case, i's value does not enter the for loop at all. It is only a numeration of simulations. 
+rnorm generates 45 values then cumsum. It simulates the next 45 periods for one instance. Do this 1e5 times.
+This snippet is a lognormal price development.
+---
+
+Geometric Random Walk.
+```{r}
+set.seed(2012)
+n = 253
+par(mfrow = c(3,3))
+for (i in (1:9))
+{ 
+  logr = rnorm(n, 0.05/253, 0.2/sqrt(253)) #specified normal, i.i.d.
+  price = c(120, 120*exp(cumsum(logr))) # 120: starting price, then ending prices at each day.
+  plot(price, type = 'b')
+}  
+```
+
+### Chap 3: Fixed Income
+**Introducing user defined functions.**
+
+1. Compute bond price
+```{r}
+bondprice = function(c, T, r, par)
+{
+  # c coupon payment, semiannual
+  # T time to maturity
+  # r vector of yields to maturity
+  # par face value
+  bv = c/r + (par - c/r)*(1+r)^(-2*T)
+  bv
+}
+```
+Pay attention to the formalism of function in R (similar to MATLAB).
+Below is the formalism. Note the customized setup.
+$$ P = \sum_{t=1}^{2T} \frac{C}{(1+r)^6}+\frac{PAR}{(1+r)^{2T}} = \frac{C}{r}+\{PAR-\frac{C}{r}\}(1+r)^{-2T} $$
+
+After some reshuffling, the formula is barely intelligible.
+2. Yield to Maturity
+essentially IRR. 
+```{r}
+price =1200
+C =40
+T =30
+par = 1000
+
+r= seq(0.02, 0.05, length = 300)
+value = bondprice(C, T, r, par)
+ytm = spline(value, r, xout = price)
+
+plot(r, value, xlab = 'YTM', ylab = 'Bond Price',
+     type ='l', main = 'par = 1000, c = 40, 
+     T = 30', lwd = 2)
+abline(h = 1200)
+abline(v = ytm)
+```
+The function does not need to take r as a vector. This arrangement is only for graphing, i.e. from a range of r to a range of value.
+** non linear root finder**
+for a function. ** uniroot **
+```{r}
+uniroot(function(r) r^2 - .5, c(0.7, 0.8))
+```
+
+```{r}
+uniroot(function(r) 40/r + (1000 - 40/r)*(1+r)^(-2*30) - 1200, c(0.02, 0.05))
+```
+Find solution by formulating an equation with one unknown parameter.
+```{r}
+library("fEcofin")
+mk.maturity = fEcofin::mk.maturity
+mk.zero2 = fEcofin::mk.zero2
+plot(mk.maturity[, 1], mk.zero2[5, 2:56], type = "l", xlab = "maturity", ylab = "yield")
+lines(mk.maturity[, 1], mk.zero2[6, 2:56], lty = 2, type = "l")
+lines(mk.maturity[, 1], mk.zero2[7, 2:56], lty = 3, type = "l")
+lines(mk.maturity[, 1], mk.zero2[8, 2:56], lty = 4, type = "l")
+legend('bottomright', c("1985-12-01", "1986-01-01", "1986-02-01", "1986-03-01"), lty = 1:4)
+```
+Directly query package data: fEcofin::mk.maturity. 
+Do not change directory!
+```{r}
+intForward = mk.maturity[, 1] * mk.zero2[6, 2:56]
+xout = seq(0, 20, length = 200)
+z1 = spline(mk.maturity[, 1], intForward, xout = xout) #x must enter y. xout: points on the span to fill, given x to get y
+forward = diff(z1$y) / diff(z1$x)
+T_grid = (xout[-1] + xout[-200]) / 2
+plot(T_grid, forward, type = "l", lwd = 2, ylim = c(0.06, 0.11))
+
+```
+Spline is a non-parametric model.
+forward: is not really a continuous function but a piece-wise cumulative product.
+
+3. Spot Rate: nothing
+4. Term Structure: See above
+5.Duration Convexity Match: Nothing.
+Duration, Convexity can be crudely applied in bond hedging. It is equivalent to solving linear equations.
+
+### Chap 4: Exploratory Data Analysis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
